@@ -34,8 +34,8 @@ figure, plot(t, squeeze(data(voxCoord(1), voxCoord(2), voxCoord(3),:)), 'r-')
 xlabel('Time (s)')
 ylabel('fMRI reponse (image intensity)')
 
-% or 2d image at z = 17, t=100
-whichZ = 17; whichT = 100;
+% or 2d image at z = 17, t=52
+whichZ = 17; whichT = 52;
 figure, imagesc(squeeze(data(:,:, whichZ, whichT))); colormap(gray), colorbar
 title(sprintf('Slice through data at z=%i, t=%i', whichZ, whichT))
 
