@@ -1,10 +1,15 @@
-function [ s ] = loadSurfVTK(filename, verbose)
+function [ s ] = loadSurfVTK(filename, transformToSurfRelax, volumeSize, verbose)
 %loadVTK - load VTK file into structure
 %
 %      usage: [ s ] = loadSurfVTK( filename, [verbose] )
 %         by: lpzds1
 %       date: Feb 10, 2015
 %     inputs: filename
+%             transformToSurfRelax [default 0]
+%               set this to 1, to transform to coordinate frame used in mrTools
+%             volumeSize = [175 256 256]  (only used with previous option)
+%             verbose
+%
 %    outputs: s - a struct w/ the following fields
 %                 vtcs
 %                 tris
@@ -35,8 +40,21 @@ function [ s ] = loadSurfVTK(filename, verbose)
 
 
 % error checking - does file exist, etc.
-if nargin < 2
+if nargin < 4
     verbose = 0;
+end
+
+% default volume size in RAS coordinates
+if nargin < 3
+  volumeSize = [176 256 256];
+end
+
+if nargin < 2
+    % by default, read data as it is in file...
+    % is this is set to 1, then subtract 1 from tris and vtcs
+    % and shift by 0.5 x, y and z dim respectively to "uncenter" coords in
+    % cube of "volumeSize"
+    transformToSurfRelax = 0;
 end
 
 try
@@ -47,8 +65,19 @@ catch
     return
 end
 
-s.vtcs = vertex';
-s.tris = faces';
+if transformToSurfRelax
+    % for OFF compatibility need to subtract on, but not here...
+    % faces   = faces  -1; % not tris, as these should be read in 1-index
+    % vertex  = vertex -1;
+
+    % center image
+    vertex(:,1) = vertex(:,1) + volumeSize(1)/2;   % higher, more right
+    vertex(:,2) = vertex(:,2) + volumeSize(2)/2;   % higher, more anterior
+    vertex(:,3) = vertex(:,3) + volumeSize(3)/2;   % higher, more superior
+end
+
+s.vtcs = vertex;
+s.tris = faces;
 s.Nvtcs = size(s.vtcs,1);
 s.Ntris = size(s.tris,1);
 s.Nedges = []; % to do / need to check how to get this from VTK
@@ -105,7 +134,7 @@ if cnt~=3*nvert
     warning('Problem in reading vertices.');
 end
 A = reshape(A, 3, cnt/3);
-vertex = A;
+vertex = A';
 
 %% read polygons
 str = fgets(fid);
@@ -128,7 +157,8 @@ if(info == 'P')
     end
     
     A = reshape(A, 4, cnt/4);
-    face = A(2:4,:)+1;
+    face = transpose( A(2:4,:)+1 );
+    
 end
 
 if(info ~= 'P')
@@ -147,7 +177,7 @@ if(info == 'V')
     end
     
     A = reshape(A, 2, cnt/2);
-    face = repmat(A(2,:)+1, 3, 1);
+    face = transpose( repmat(A(2,:)+1, 3, 1) );
 end
 
 if((info ~= 'P') && (info ~= 'V'))
