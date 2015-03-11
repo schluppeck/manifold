@@ -1,4 +1,3 @@
-% function [  ] = dataInfoS1()
 %dataInfoS1 - quick walkthrough of how data are organized
 %
 %      usage: [  ] = dataInfoS1(  )
@@ -11,9 +10,12 @@
 %    access info in the different data structures 
 %
 %        e.g: 
+%             dataInfoS1
 
 % 4d functional imaging data is stored in this mat file
-fname = 'somato-fMRI-periodic';  % big data file. > 127Mb
+% we usually store data in a different format (NIFTI), but for convenience,
+% here I saved out the same info into a MAT file
+fname = 'somato-fMRI-periodic';  % big data file. > 60mb
 load(fname)
 
 % provides "data" and "hdr" (some info)
@@ -23,20 +25,25 @@ load('S1-definition-ds20100728')
 % provides S1 (some coordinates and also a matrix/transform for getting
 % between the scan (data) space and the anatomy space in which the cortical
 % surfaces are stores.
-S1.base2scan
+disp('4x4 transform that takes ANATOMY coordinates to SCAN space')
+disp(S1.base2scan)
 
-% separation between timepoints is 2.4s
+% for this data set, separation between timepoints is 2.4s
 t = 2.4 .* [0:(size(data,4)-1)] ;
 
-% so plotting time series at 37,61,17:
+% so plotting time series at x,y,z: 37,61,17:
 voxCoord = [37,61,17];
 figure, plot(t, squeeze(data(voxCoord(1), voxCoord(2), voxCoord(3),:)), 'r-')
+title(sprintf('fMRI signal over time at [%i,%i,%i]',voxCoord ))
 xlabel('Time (s)')
 ylabel('fMRI reponse (image intensity)')
 
 % or 2d image at z = 17, t=52
 whichZ = 17; whichT = 52;
-figure, imagesc(squeeze(data(:,:, whichZ, whichT))); colormap(gray), colorbar
+figure
+imagesc(squeeze(data(:,:, whichZ, whichT))); 
+axis image
+colormap(gray), colorbar
 title(sprintf('Slice through data at z=%i, t=%i', whichZ, whichT))
 
 % how does this map onto the 2d surface?
@@ -62,13 +69,15 @@ alpha(0.9)
 
 % find where that voxel would have been:
 voxCoord = [37,61,17];
+% need inv(xform) because we are going the other way
 voxCoordInAnatomy = inv(S1.base2scan) * [ voxCoord, 1]';
 
+% and plot the point
 hold on
 p_ = plot3(voxCoordInAnatomy(1), voxCoordInAnatomy(2), voxCoordInAnatomy(3), 'ro');
 set(p_, 'markersize',15, 'markerfacecolor','r')
 
-% plot some of the vertices corresponding to S1, say every 100th, to make
+% plot some of the vertices corresponding to S1, say every 250th, to make
 % rendering abit quicker
 skip = 250;
 s1_ = plot3(S1.volumeCoords(1:skip:end,1), ...
@@ -83,6 +92,9 @@ sCurve = loadSurfVTK('surf/rh.curv.vtk', 1);
 
 % across all those surfaces for this one subject, the vertex number (its
 % ID) remains the same, only their locations in 3D change...
+%
+% renderSurf is just a small wrapper function around matlab
+% |patch| to make the code a bit cleaner.
 
 figure, subplot(2,1,1)
 renderSurf(sSphere, sign(sCurve.data))
@@ -93,4 +105,3 @@ renderSurf(sCurve)
 title('curvature rendered on normal/white matter representation')
 colormap(gray)
 
-% end
