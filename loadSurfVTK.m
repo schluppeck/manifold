@@ -193,7 +193,7 @@ if str == -1
 else
     % try reading it out
     pat = '\w+';
-    m = regexpi(str, pat, 'match')
+    m = regexpi(str, pat, 'match');
     
     % info = sscanf(str,'%c %*s %*s', 1);
     isPointData = strcmpi('POINT_DATA',m);
