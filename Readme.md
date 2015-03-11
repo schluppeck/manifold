@@ -28,13 +28,13 @@ matlab code
 
 a couple of simple matlab functions for loading in vtk files and basics of displaying.
 
-* use `loadSurfVTK()` to get meshes into matlab
-* `patch()` to render, e.g.
+inspect `dataInfoS1` to get a sense of how to use various functions. but here as a quick example:
 
     fname = 'rh.pial.vtk'; % white matter surface
     s = loadSurfVTK(fname);
-    figure, patch('vertices',s.vtcs, 'faces',s.tris, 
-    'facevertexcdata', ones(s.Nvtcs,1)), colormap(jet)
+    figure
+    renderSurf(s) % wrapper around |patch|
+    colormap(jet)
     shading interp
     material dull
     light
