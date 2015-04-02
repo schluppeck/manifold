@@ -22,6 +22,12 @@ to get vtk file for e.g. the right hemisphere, you can `cd` to the subject's dir
 
     for fname in +(rh|lh).+([a-z]) ; do mris_convert $fname $fname.vtk; done
 
+note that for scalar data for which there is only one value per vertex is (eg. curv, thickness or area files), `mris_convert` needs some additional information. in this case you need to specify the surface from which data was derived with an additional option.
+
+	# add -c option
+	mris_convert -c lh.curv lh.white lh.curv.vtk
+	mris_convert -c rh.curv rh.white lh.rurv.vtk
+	
 
 matlab code
 -----------
