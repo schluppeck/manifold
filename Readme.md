@@ -26,7 +26,7 @@ note that for scalar data for which there is only one value per vertex is (eg. c
 
 	# add -c option
 	mris_convert -c lh.curv lh.white lh.curv.vtk
-	mris_convert -c rh.curv rh.white rh.rurv.vtk
+	mris_convert -c rh.curv rh.white rh.curv.vtk
 	
 
 matlab code
