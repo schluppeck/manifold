@@ -110,7 +110,10 @@ if nargin < 2
     verbose = 1;
 end
 
+
 fid = fopen(filename,'r');
+[FILENAME,PERMISSION,MACHINEFORMAT,ENCODING] = fopen(fid);
+
 if( fid == -1 )
     error('Can''t open the file.');
     return;
@@ -120,6 +123,7 @@ str = fgets(fid);   % -1 if eof
 if ~strcmp(str(3:5), 'vtk')
     error('The file is not a valid VTK one.');
 end
+
 
 %% read header %%
 str = fgets(fid);
@@ -131,7 +135,15 @@ nvert = sscanf(str,'%*s %d %*s', 1);
 %% read vertices
 [A,cnt] = fscanf(fid,'%f %f %f', 3*nvert);
 if cnt~=3*nvert
-    warning('Problem in reading vertices.');
+    warning('Problem in reading vertices - trying binary.');    
+    % [A,cnt] = fscanf(fid,'%f %f %f', 3*nvert);
+    % vtkwrite: fwrite(fid, [x(:)';y(:)';z(:)'],'float','b');
+    str = fgets(fid);
+    [A,cnt] = fscanf(fid,'%f %f %f', 3*nvert);
+    if cnt~=3*nvert
+       % still a problem!
+       keyboard
+    end
 end
 A = reshape(A, 3, cnt/3);
 vertex = A';
@@ -152,7 +164,9 @@ if(info == 'P')
     nface = sscanf(str,'%*s %d %*s', 1);
     
     [A,cnt] = fscanf(fid,'%d %d %d %d\n', 4*nface);
-    if cnt~=4*nface
+    if cnt ==0
+        disp('(problem reading in faces) : not 4xn')
+    elseif cnt~=4*nface
         warning('Problem in reading faces.');
     end
     
@@ -172,8 +186,11 @@ if(info == 'V')
     nv = sscanf(str,'%*s %d %*s', 1);
     
     [A,cnt] = fscanf(fid,'%d %d \n', 2*nv);
-    if cnt~=2*nv
+    if cnt == 0
+        disp('(no face data)')
+    elseif cnt~=2*nv
         warning('Problem in reading faces.');
+        keyboard
     end
     
     A = reshape(A, 2, cnt/2);
@@ -190,6 +207,7 @@ str = fgets(fid);
 if str == -1
     % no data present beyond this point
     data = 0;
+    
 else
     % try reading it out
     pat = '\w+';
@@ -197,7 +215,9 @@ else
     
     % info = sscanf(str,'%c %*s %*s', 1);
     isPointData = strcmpi('POINT_DATA',m);
-    if any(isPointData)
+    isScalarData = strcmpi('SCALARS',m);
+    
+    if any(isPointData) 
         np = str2num(m{find(isPointData)+1});
         
         % two additional lines describing data
@@ -207,6 +227,15 @@ else
         % then the data
         [data,cnt] = fscanf(fid,'%f\n', np);
         %info = sscanf(str,'%c %*s %*s', 1);
+    elseif any(isScalarData)
+        % one additional lines describing data
+        str = fgets(fid);
+        % then the data
+        [data,cnt] = fscanf(fid,'%f\n',inf);
+        if cnt ~= numel(data)
+            disp('(uhoh) problem reading in SCALAR data')
+            keyboard
+        end
     else
         data = 0;
     end
