@@ -44,12 +44,24 @@ else
     facevertexcdata = ones(size(s.vtcs));
 end
 
-h_ = patch('vertices', s.vtcs, 'faces', s.tris, ...
-    'facevertexcdata', facevertexcdata );
-material dull
-shading interp
-colormap gray
-light
+if s.Ntris == 0
+    disp('(renderSurf) no faces - cannot render - using point cloud instead')  
+    usePointCloud = true;
+else
+    usePointCloud = false;
+end
+
+if usePointCloud
+    h_ = scatter3(s.vtcs(:,1), s.vtcs(:,2), s.vtcs(:,3), 10, facevertexcdata); 
+    light
+else
+    h_ = patch('vertices', s.vtcs, 'faces', s.tris, ...
+        'facevertexcdata', facevertexcdata );
+    material dull
+    shading interp
+    colormap gray
+    light
+end
 axis equal
 axis vis3d
 axis off
