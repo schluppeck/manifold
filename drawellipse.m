@@ -1,11 +1,11 @@
-function [ h, xy ] = drawellipse(params, nPoints)
+function [ h, xy ] = drawellipse(params, nPoints, varargin)
 %drawellipse - draw an ellipse
 %
-%      usage: [ h, xy ] = drawellipse( params, nPoints )
+%      usage: [ h, xy ] = drawellipse( params, nPoints, [linspec] )
 %         by: lpzds1
 %       date: Feb 18, 2015
 %        $Id$
-%     inputs: params, nPoints
+%     inputs: params, nPoints, linespec
 %             []
 %    outputs: h, xy
 %
@@ -15,12 +15,13 @@ function [ h, xy ] = drawellipse(params, nPoints)
 %        e.g: %        [rx,  ry,  cx, cy, rot]
 %             params = [2.5, 1.2, 2,  5, pi/8];
 %             figure, drawellipse(params, 360)
+%             hold on, drawellipse(params, 360, 'color', 'b', 'linewidth', 5)
 %             axis equal
 %
 %  see also: fitellipse
 %
 
-if nargin < 2
+if nargin < 2 || isempty(nPoints)
     nPoints = 100;
 end
 
@@ -49,7 +50,10 @@ ny = x*sin(params(5))+y*cos(params(5)) + params(2);
 xy = [nx(:), ny(:)];
 
 hold on
-h = plot(nx,ny,'r-');
-
+if isempty(varargin)
+    h = plot(nx,ny,'r-');
+else
+    h = plot(nx,ny,varargin{:});
+end
 
 end
