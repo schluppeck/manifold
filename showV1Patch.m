@@ -1,4 +1,4 @@
-function [  ] = showV1Patch(spCoords, curv, v1label, thr)
+function [  ] = showV1Patch(spCoords, curv, v1label, thr, binarized)
 %showV1Patch - render the patch of v1
 %
 %      usage: [  ] = showV1Patch( spCoords, curv, v1label, thr )
@@ -12,13 +12,18 @@ function [  ] = showV1Patch(spCoords, curv, v1label, thr)
 %
 %   see also: fitV1ellipse, mapV1
 
+% flag that determines plotting style
 oldStyle = false; % true -> scatter plot; false -> patch
+
+if ieNotDefined('binarized'), binarized = false; end
 
 % threshold the V1 label probabilites according to a value
 thresholdedV1label = v1label(v1label(:,5)>thr , :);
 
 % and pick the corresponding curvature values
 fvertexcdata = curv(thresholdedV1label(:,1));
+
+if binarized, fvertexcdata = -sign(fvertexcdata); end
 
 if oldStyle
     % used to do something like this...
