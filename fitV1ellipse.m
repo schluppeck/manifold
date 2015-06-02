@@ -93,7 +93,20 @@ end
 % ultimately, to undo the rotation / shift... can convert to homogeneous coords and
 % then apply the inverse transform
 
-% xform contains the parameters of theta,
+% rotation could be Rot-pi/2 and Rx Ry swapped... as per comments in
+% Fitzgibbon code. make this unambiguous here:
+
+if p(5) < -pi/4
+    p(5) = p(5) + pi/2;
+    p([3 4]) = p([4 3]); % swap radii
+    fprintf('(fitV1ellipse) theta < -pi/4');
+elseif p(5) > +pi/4
+    p(5) = p(5) - pi/2;
+    p([3 4]) = p([4 3]); % swap radii
+    fprintf('(fitV1ellipse) theta > +pi/4');
+end
+
+% xform contains the parameters of theta, centre shift...
 xform = [cos(p(5)) -sin(p(5)) p(1)
          sin(p(5)) cos(p(5))  p(2)
          0          0           1 ];

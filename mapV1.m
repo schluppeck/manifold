@@ -25,8 +25,10 @@ if ieNotDefined('subject'), subject = 'ab'; end
 if ieNotDefined('hemi'), hemi = 'lh'; end
 if ieNotDefined('showSphere'), showSphere = true(); end
 if ieNotDefined('data'), data = []; end
+if ieNotDefined('thr'), thr = 0.8; end % 0.8
 
-if ieNotDefined('thr'), thr = 0.5; end % 0.8
+% should be undo the residual rotation?
+if ieNotDefined('unrotate'), unrotate = true; end
 
 % show curvature binarized true/false?
 binarized = true;
@@ -77,9 +79,10 @@ full_curvname = fullfile(pname,surffolder,curvname);
 
 % define some helper functions view this in spherical coords?
 mycart2sph = @(X, ts) cart2sph(ts.vtcs(X(:,1),1), ts.vtcs(X(:,1),2),ts.vtcs(X(:,1),3));
-% myshear = @(X) [1 0.65 0; 0 1 0; 0 0 1] * toHomogeneous([X(:,1), X(:,2)]);
+% myshear = @(X) [1 0.65 0; 0 1 0; 0 0 1] * toHomogeneous([X(:,1), X(:,2)]); only for FSAVERAGE sphere?     
 myshear = @(X) [1 0 0; 0 1 0; 0 0 1] * toHomogeneous([X(:,1), X(:,2)]);
-
+fromHomogeneous = @(X) transpose(X([1 2],:));
+myUnrotate = @(X, xform) fromHomogeneous(xform * toHomogeneous([X(:,1), X(:,2)]));
 myScatter = @(X,ts) scatter(  ts.vtcs(X(:,1),1), ts.vtcs(X(:,1),2), 5, 'r.'  );
 myScatter3 = @(X,ts) scatter3(  ts.vtcs(X(:,1),1), ts.vtcs(X(:,1),2),ts.vtcs(X(:,1),3), 5, 'r.'  );
 
@@ -117,7 +120,6 @@ S = zeros(size(v1label,1), 3);
 [S(:,1), S(:,2), S(:,3) ] = mycart2sph(v1label(:,1), sSphere);
 W = transpose(myshear(S(:,[1 2]))); % long rows, so need to transpose
 
-
 if showSphere
     % plot into a subplot
     subplot(1,3,1)
@@ -139,15 +141,26 @@ if showSphere
     subplot(1,3,[2 3])
 end
 
+
+if unrotate
+    % fit an ellipse around the points and don't show it
+    [xform, h,p] = fitV1ellipse(W, false);
+    W = myUnrotate(W, inv(xform));
+end
+[xform_after, h,p] = fitV1ellipse(W, true);
+
 % show curvature pattern in 2d scatter plot or another funky version, which
 % is implemented in showV1Patch
 showV1Patch(W, c, v1labelRaw, thr, binarized);
-% fit an ellipse around the points and show it
-[xform, h,p] = fitV1ellipse(W, true);
+
 axis equal
 axis off
 
-% title(['V1: ' hemi ', subject: ' subject])
+% show elliptical coordinate frame
+% quadratic: (x/a)^2 + (y/b)^2 = 1
+% geometric: x = a * sin(t);
+%            y = b * cos(t);
+
 
 % package up some data to return
 returnData.ellipse.xform = xform;
@@ -159,8 +172,6 @@ returnData.patch.c = c;
 returnData.patch.sSphere = sSphere;
 returnData.patch.v1label = v1label;
 returnData.patch.v1LabelRaw = v1labelRaw;
-
-
 
 
 % and reset UNIX environment variable to what we found...
