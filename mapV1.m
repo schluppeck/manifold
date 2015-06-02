@@ -1,4 +1,4 @@
-function [  ] = mapV1(subject, hemi, subjectRoot, showSphere)
+function [ returnData ] = mapV1(subject, hemi, subjectRoot, showSphere, data)
 %mapV1 - get V1 definition automatically in a subject
 %
 %      usage: [  ] = mapV1(subject, hemi, subjectRoot, showSphere )
@@ -24,8 +24,9 @@ if ieNotDefined('subjectRoot'), subjectRoot = '/data/anatomy/freesurfer/subjects
 if ieNotDefined('subject'), subject = 'ab'; end
 if ieNotDefined('hemi'), hemi = 'lh'; end
 if ieNotDefined('showSphere'), showSphere = true(); end
+if ieNotDefined('data'), data = []; end
 
-if ieNotDefined('thr'), thr = 0.8; end
+if ieNotDefined('thr'), thr = 0.5; end % 0.8
 
 % show curvature binarized true/false?
 binarized = true;
@@ -76,7 +77,9 @@ full_curvname = fullfile(pname,surffolder,curvname);
 
 % define some helper functions view this in spherical coords?
 mycart2sph = @(X, ts) cart2sph(ts.vtcs(X(:,1),1), ts.vtcs(X(:,1),2),ts.vtcs(X(:,1),3));
-myshear = @(X) [1 0.65 0; 0 1 0; 0 0 1] * toHomogeneous([X(:,1), X(:,2)]);
+% myshear = @(X) [1 0.65 0; 0 1 0; 0 0 1] * toHomogeneous([X(:,1), X(:,2)]);
+myshear = @(X) [1 0 0; 0 1 0; 0 0 1] * toHomogeneous([X(:,1), X(:,2)]);
+
 myScatter = @(X,ts) scatter(  ts.vtcs(X(:,1),1), ts.vtcs(X(:,1),2), 5, 'r.'  );
 myScatter3 = @(X,ts) scatter3(  ts.vtcs(X(:,1),1), ts.vtcs(X(:,1),2),ts.vtcs(X(:,1),3), 5, 'r.'  );
 
@@ -139,13 +142,26 @@ end
 % show curvature pattern in 2d scatter plot or another funky version, which
 % is implemented in showV1Patch
 showV1Patch(W, c, v1labelRaw, thr, binarized);
-
 % fit an ellipse around the points and show it
-fitV1ellipse(W, true);
+[xform, h,p] = fitV1ellipse(W, true);
 axis equal
 axis off
 
 % title(['V1: ' hemi ', subject: ' subject])
+
+% package up some data to return
+returnData.ellipse.xform = xform;
+returnData.ellipse.p = p;
+returnData.ellipse.h = h;
+
+returnData.patch.W = W;
+returnData.patch.c = c;
+returnData.patch.sSphere = sSphere;
+returnData.patch.v1label = v1label;
+returnData.patch.v1LabelRaw = v1labelRaw;
+
+
+
 
 % and reset UNIX environment variable to what we found...
 if didResetSubjectsDir

@@ -18,6 +18,7 @@ oldStyle = false; % true -> scatter plot; false -> patch
 if ieNotDefined('binarized'), binarized = false; end
 
 % threshold the V1 label probabilites according to a value
+% return all columns ID, sphericalCoords [1 2 3], label prob
 thresholdedV1label = v1label(v1label(:,5)>thr , :);
 
 % and pick the corresponding curvature values
@@ -27,7 +28,6 @@ if binarized, fvertexcdata = -sign(fvertexcdata); end
 
 if oldStyle
     % used to do something like this...
-    v1label = v1label(v1label(:,5)>thr , :);
     scatter(spCoords(:,1), spCoords(:,2),35, fvertexcdata , 'filled'), colormap(gray);   
 else
     % pick out the triangulation of the points in V1label, then show them with

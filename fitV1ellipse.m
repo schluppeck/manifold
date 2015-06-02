@@ -1,4 +1,4 @@
-function [ xform, H ] = fitV1ellipse(spCoords,  plotEllipse, useShear, debugPlot)
+function [ xform, H, p ] = fitV1ellipse(spCoords,  plotEllipse, useShear, debugPlot)
 %fitV1ellipse - fit ellipse around coordinates of labels that define V1
 %
 %      usage: [ xform ] = fitV1ellipse( coords,[plotEllipse], [useShear], [debugPlot] )
