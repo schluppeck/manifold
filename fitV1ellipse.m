@@ -99,12 +99,16 @@ end
 if p(5) < -pi/4
     p(5) = p(5) + pi/2;
     p([3 4]) = p([4 3]); % swap radii
-    fprintf('(fitV1ellipse) theta < -pi/4');
+    fprintf('(fitV1ellipse) theta < -pi/4\n');
 elseif p(5) > +pi/4
     p(5) = p(5) - pi/2;
     p([3 4]) = p([4 3]); % swap radii
-    fprintf('(fitV1ellipse) theta > +pi/4');
+    fprintf('(fitV1ellipse) theta > +pi/4\n');
 end
+
+% at this point also check that the ordering of major minor axes is as we
+% expect
+assert(p(3) >= p(4), '(uhoh) major / minor axes swapped?' )
 
 % xform contains the parameters of theta, centre shift...
 xform = [cos(p(5)) -sin(p(5)) p(1)
