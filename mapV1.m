@@ -9,6 +9,8 @@ function [ returnData ] = mapV1(subject, hemi, subjectRoot, showSphere, data)
 %
 %    purpose: using freesurfer functions and segmentations.
 %
+%   see also: bensonCoordinates, fitBensonCoords, mapV1int
+%
 %        e.g:
 %             subjectRoot = '/Volumes/research/VNG/data/anatomy/freesurfer/subjects-7T'
 %             % - or -
@@ -24,10 +26,26 @@ if ieNotDefined('subjectRoot'), subjectRoot = '/data/anatomy/freesurfer/subjects
 if ieNotDefined('subject'), subject = 'ab'; end
 if ieNotDefined('hemi'), hemi = 'lh'; end
 if ieNotDefined('showSphere'), showSphere = true(); end
-if ieNotDefined('data'), data = []; end
-if ieNotDefined('thr'), thr = 0.8; end % 0.8
+if ieNotDefined('showPatchForDebug'), showPatchForDebug = true; end
 
-% should be undo the residual rotation?
+if ieNotDefined('data'), data = []; end
+% actually try to fit the model described in benson et al to the data
+if ieNotDefined('fitModel') && ~isempty(data)
+    fitModel = true; 
+elseif ieNotDefined('fitModel') && isempty(data)
+    disp('(!) cannot fit model, not data present')
+    fitModel = false;
+    keyboard
+end
+
+
+% probability threshold for deciding what is INSIDE V1
+if ieNotDefined('thr'), thr = 0.2; end % 0.8
+
+% should be undo the residual rotation in the V1 ellipse?
+% if set to TRUE then an affine transform is applied to center the ellipse
+% on 0,0 with the major axis aligned to the xaxis
+% if set to FALSE, then the points are left in place.
 if ieNotDefined('unrotate'), unrotate = true; end
 
 % show curvature binarized true/false?
@@ -50,7 +68,8 @@ end
 
 % check if the SUBJECTS_DIR is consistent with what user asks for
 % FS read_label relies on this to be set correctly...
-
+%
+% !TODO refactor this at some point to remove this assumption
 SUBJECTS_DIR = getenv('SUBJECTS_DIR');
 if ~strcmpi(SUBJECTS_DIR, subjectRoot)
     oldSUBJECTS_DIR = SUBJECTS_DIR;
@@ -68,6 +87,8 @@ surffolder = 'surf';
 labelfolder = 'label';
 
 % ... and naming conventions
+% for making this function more general (S1? Brodman areas) we could
+% consider passing these in as option arguments
 surfname = sprintf('%s.white',hemi);
 curvname = sprintf('%s.curv',hemi);
 labelname = sprintf('%s.v1.prob',hemi);
@@ -79,7 +100,7 @@ full_curvname = fullfile(pname,surffolder,curvname);
 
 % define some helper functions view this in spherical coords?
 mycart2sph = @(X, ts) cart2sph(ts.vtcs(X(:,1),1), ts.vtcs(X(:,1),2),ts.vtcs(X(:,1),3));
-% myshear = @(X) [1 0.65 0; 0 1 0; 0 0 1] * toHomogeneous([X(:,1), X(:,2)]); only for FSAVERAGE sphere?     
+% myshear = @(X) [1 0.65 0; 0 1 0; 0 0 1] * toHomogeneous([X(:,1), X(:,2)]); only for FSAVERAGE sphere?
 myshear = @(X) [1 0 0; 0 1 0; 0 0 1] * toHomogeneous([X(:,1), X(:,2)]);
 fromHomogeneous = @(X) transpose(X([1 2],:));
 myUnrotate = @(X, xform) fromHomogeneous(xform * toHomogeneous([X(:,1), X(:,2)]));
@@ -135,7 +156,7 @@ if showSphere
     end
     camlight('left')
 end
-    
+
 if showSphere
     % and make the 2nd patch a subplot figure, too
     subplot(1,3,[2 3])
@@ -145,22 +166,32 @@ end
 if unrotate
     % fit an ellipse around the points and don't show it
     [xform, h,p] = fitV1ellipse(W, false);
+    % this overwrites the points stored in W, which are then used further
+    % along
+    
+    % keep a copy of rotated W (for debug plot)
+    Wrotated = W;
     W = myUnrotate(W, inv(xform));
+else
+    Wrotated = []; % no need to keep an extra copy. W is still rotated
 end
-[xform_after, h,p] = fitV1ellipse(W, true);
 
 % show curvature pattern in 2d scatter plot or another funky version, which
 % is implemented in showV1Patch
 showV1Patch(W, c, v1labelRaw, thr, binarized);
 
+% fit and show ellipse to "de/un-rotated points". Also get the parameters
+% again. The center should be 0,0, the radii the same as before and the
+% rotation 0 rad!
+[xform_after, hA,pA] = fitV1ellipse(W, true);
+
+colormap(gray)
+caxis([-5 5])
 axis equal
 axis off
 
 % show elliptical coordinate frame
-% quadratic: (x/a)^2 + (y/b)^2 = 1
-% geometric: x = a * sin(t);
-%            y = b * cos(t);
-
+% - see also: bensonCoordinates()
 
 % package up some data to return
 returnData.ellipse.xform = xform;
@@ -172,6 +203,30 @@ returnData.patch.c = c;
 returnData.patch.sSphere = sSphere;
 returnData.patch.v1label = v1label;
 returnData.patch.v1LabelRaw = v1labelRaw;
+
+if showPatchForDebug
+    fd_ = figure;
+    subplot(2,1,1)
+    scatter(W(:,1), W(:,2), 'ro')
+    axis equal
+    title(sprintf('ellipse; sub: %s, hemi: %s', subject, hemi))
+    if ~isempty(Wrotated)
+        subplot(2,1,2)
+        scatter(Wrotated(:,1), Wrotated(:,2), 'b+')
+        axis equal
+        xNeg = sum(Wrotated(:,1) <= -pi/2);
+        xPos = sum(Wrotated(:,1) > -pi/2);
+        title(sprintf('orig ellipse; sub: %s, hemi: %s [< / > -pi/2] %i/%i', subject, hemi, xNeg, xPos))
+    end
+end
+
+% spherical coords are stored in W for this patch... ellipse params in pA
+% (after un-rotation step)
+returnData.patch.elCoords  = fitBensonCoords( W, pA, hemi);
+
+if fitModel
+    
+end
 
 
 % and reset UNIX environment variable to what we found...
