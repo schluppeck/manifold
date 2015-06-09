@@ -5,8 +5,9 @@ function [ h, xy ] = drawellipse(params, nPoints, varargin)
 %         by: lpzds1
 %       date: Feb 18, 2015
 %        $Id$
-%     inputs: params, nPoints, linespec
-%             []
+%     inputs: a) params, nPoints, [linespec]
+%             b) params, nPoints, 'fillColor', [1x3, rgb]
+%             
 %    outputs: h, xy
 %
 %    purpose: draw an ellipse given parameters returned from the function
@@ -17,6 +18,9 @@ function [ h, xy ] = drawellipse(params, nPoints, varargin)
 %             figure, drawellipse(params, 360)
 %             hold on, drawellipse(params, 360, 'color', 'b', 'linewidth', 5)
 %             axis equal
+%
+%             % - or - filled
+%             drawellipse(params, 360, 'fillColor', [1 1 0])
 %
 %  see also: fitellipse
 %
@@ -52,6 +56,9 @@ xy = [nx(:), ny(:)];
 hold on
 if isempty(varargin)
     h = plot(nx,ny,'r-');
+elseif strcmp(varargin{1}, 'fillColor')
+    disp('(!) drawing a filled ellipse')
+    h_ = patch(nx, ny, varargin{2});
 else
     h = plot(nx,ny,varargin{:});
 end

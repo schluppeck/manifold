@@ -125,6 +125,40 @@ opacity(badIdx) = 0;
 
 % make sure we can go from 3D coords back to vertices in the Freesurfer
 % world!
+
+if(0)
+
+% plotBensonModel
+bensonECC = @(q, xCoord) 90.*exp(q .* (xCoord-1));
+bensonPA = @(q, yCoord) 90 + 90 .*sign(yCoord) .* (abs(yCoord)).^q;
+
+figure
+
+% plot some numbers to see...
+[cxX, cxY] = meshgrid(0:0.1:1, -1:0.1:+1);
+
+% 
+q_ecc = 1.2;
+q_pa = 1.1;
+
+
+ECC = bensonECC(q_ecc, cxX );
+PA = bensonPA(q_pa, cxY);
+
+subplot(2,1,1)
+scatter(bPrime, xIntercept, [], xIntercept ,'filled')
+colormap(rainbow_colors)
+hold on
+contour(cxX, cxY, ECC);
+caxis([0 0.25])
+
+subplot(2,1,2)
+contour(cxX, cxY, PA);
+colormap(rainbow_colors)
+
+end
+
+
 keyboard
 
 

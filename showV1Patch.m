@@ -19,7 +19,8 @@ if ieNotDefined('binarized'), binarized = false; end
 
 % threshold the V1 label probabilites according to a value
 % return all columns ID, sphericalCoords [1 2 3], label prob
-thresholdedV1label = v1label(v1label(:,5)>thr , :);
+% thresholdedV1label = v1label(v1label(:,5)>thr , :);
+thresholdedV1label = threshold_label(v1label, thr);
 
 % and pick the corresponding curvature values
 fvertexcdata = curv(thresholdedV1label(:,1));
@@ -33,8 +34,10 @@ else
     % pick out the triangulation of the points in V1label, then show them with
     % patch
     dt = delaunayTriangulation(spCoords(:,[1 2]));
-    patch('vertices', dt.Points , 'faces', dt.ConnectivityList, 'facevertexcdata', fvertexcdata)
-    shading flat 
+    p_ = patch('vertices', dt.Points , 'faces', dt.ConnectivityList, 'facevertexcdata', fvertexcdata);
+    set(p_,'markeredgecolor', 'none');
+    % shading flat
+    shading interp
     axis equal
 end
 
