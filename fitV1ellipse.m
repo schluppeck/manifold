@@ -76,11 +76,6 @@ end
 
 k = convhull([x,y]);
 
-if debugPlot || plotEllipse
-    hold on
-    plot(x(k), y(k), 'ko', 'markerfacecolor', 'w', 'linewidth',2, 'markeredgecolor', 'k', 'markersize',15);
-end
-
 % the following nicely does the job of fitting an ellipse - see comments in
 % function for a reference to the Fitzgibbon et al paper
 p = fitellipse(x(k), y(k));
@@ -88,6 +83,13 @@ p = fitellipse(x(k), y(k));
 if debugPlot || plotEllipse
     [ellipseP_, xyEllipse] = drawellipse(p, [] ,'color', 'b', 'linewidth',3);
 end
+
+% plot the symbols on top - the fitted ellipse underneath
+if debugPlot || plotEllipse
+    hold on
+    plot(x(k), y(k), 'ko', 'markerfacecolor', 'w', 'linewidth',2, 'markeredgecolor', 'k', 'markersize',15);
+end
+
 
 % the params in |p| are: (Cx, Cy, Rx, Ry, theta_radians)
 % ultimately, to undo the rotation / shift... can convert to homogeneous coords and

@@ -120,6 +120,11 @@ S = zeros(size(v1label,1), 3);
 [S(:,1), S(:,2), S(:,3) ] = mycart2sph(v1label(:,1), sSphere);
 W = transpose(myshear(S(:,[1 2]))); % long rows, so need to transpose
 
+Sraw = zeros(size(v1label,1), 3);
+[Sraw(:,1), Sraw(:,2), Sraw(:,3) ] = mycart2sph(v1label(:,1), sSphere);
+Wraw = transpose(myshear(Sraw(:,[1 2]))); % long rows, so need to transpose
+
+
 if showSphere
     % plot into a subplot
     subplot(1,3,1)
@@ -146,20 +151,23 @@ if unrotate
     % fit an ellipse around the points and don't show it
     [xform, h,p] = fitV1ellipse(W, false);
     W = myUnrotate(W, inv(xform));
+    %[xform, h,p] = fitV1ellipse(W, false);
+    Wraw = myUnrotate(Wraw, inv(xform));
+    
 end
-[xform_after, h,p] = fitV1ellipse(W, true);
 
 % show curvature pattern in 2d scatter plot or another funky version, which
 % is implemented in showV1Patch
-showV1Patch(W, c, v1labelRaw, thr, binarized);
+% showV1Patch(W, c, v1labelRaw, thr, binarized);
+showV1Patch(Wraw, c, v1labelRaw, thr, binarized); % show patch thresholded at different level (less conservative)
+% showV1Patch(W, c, v1labelRaw, thr, binarized); % show patch thresholded at different level (less conservative)
+
+hold on
+% superimpose the convex hull / fit ellipse
+[xform_after, h,p] = fitV1ellipse(W, true);
 
 axis equal
 axis off
-
-% show elliptical coordinate frame
-% quadratic: (x/a)^2 + (y/b)^2 = 1
-% geometric: x = a * sin(t);
-%            y = b * cos(t);
 
 
 % package up some data to return
