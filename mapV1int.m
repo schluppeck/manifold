@@ -6,11 +6,11 @@ function [  ] = mapV1int(v, overlayNum, scan, x, y, s, roi)
 %       date: Jun 01, 2015
 %        $Id$
 %     inputs: v, overlayNum, scan, x, y, s, roi
-%    outputs: 
+%    outputs:
 %
 %    purpose: load fMRI data with freesurfer / benson et al ellipses, etc
 %
-%        e.g: 
+%        e.g:
 
 % figure out which segmentation to go to
 
@@ -21,7 +21,7 @@ function [  ] = mapV1int(v, overlayNum, scan, x, y, s, roi)
 subject = lower(viewGet(v, 'subject'));
 base = viewGet(v ,'base');
 
-% strip away the "surfRelax" and "subect part, so we end up in 
+% strip away the "surfRelax" and "subect part, so we end up in
 subjectRoot = strrep(base.coordMap.path, sprintf('%s/surfRelax',subject), '');
 
 % the name of the base contains a hint whether it should be lh or rh
@@ -72,25 +72,28 @@ vtcs = base2scan * toHomogeneous( midCortex.vtcs(idx,:) );
 % [vtcs, IA, IC] = unique(round(vtcs(1:3,:)'), 'rows');
 % the corresponding points on the FS flat patch are in W
 
-if ~isempty(vtcs) 
-
-  % check scan dimensions
-  scanDims = viewGet(v,'scandims');
-
-  % make sure we are inside scan dimensions
-  xCheck = (vtcs(1,:) >= 1) & (vtcs(1,:) <= scanDims(1));
-  yCheck = (vtcs(2,:) >= 1) & (vtcs(2,:) <= scanDims(2));
-  sCheck = (vtcs(3,:) >= 1) & (vtcs(3,:) <= scanDims(3));
-
-  % only return ones that are in bounds
-  vtcs = vtcs(:,find(xCheck & yCheck & sCheck));
-  % now convert to columns 
-  vtcs = round(vtcs(1:3,:)');
-
-  % that means we also need to chop out the values from flat patch
-  inbounds = find(xCheck & yCheck & sCheck);
-  fsData.patch.W = fsData.patch.W(inbounds,:);
-  
+if ~isempty(vtcs)
+    
+    % check scan dimensions
+    scanDims = viewGet(v,'scandims');
+    
+    % make sure we are inside scan dimensions
+    xCheck = (vtcs(1,:) >= 1) & (vtcs(1,:) <= scanDims(1));
+    yCheck = (vtcs(2,:) >= 1) & (vtcs(2,:) <= scanDims(2));
+    sCheck = (vtcs(3,:) >= 1) & (vtcs(3,:) <= scanDims(3));
+    
+    % only return ones that are in bounds
+    vtcs = vtcs(:,find(xCheck & yCheck & sCheck));
+    % vtcs(:,~(xCheck & yCheck & sCheck)) = nan ; % this leaves sizes the same, but sets bad indeces to nan
+    
+    % now convert to columns
+    vtcs = round(vtcs(1:3,:)');
+    
+    % that means we also need to chop out the values from flat patch
+    inbounds = find(xCheck & yCheck & sCheck);
+    fsData.patch.W = fsData.patch.W(inbounds,:); % this causes problems with differeing sizes
+    % fsData.patch.W(~inbounds,:) = nan; % keep but don't display?!
+    
 else
     disp('something is very wrong - no vtcs!')
     return
@@ -112,56 +115,87 @@ cmapRange = curOverlay.range;
 cmap = curOverlay.colormap;
 nColors = size(cmap,1);
 
-colorIdx = interp1(linspace(cmapRange(1), cmapRange(2), nColors), 1:nColors, overlay_values, 'nearest'); 
 
-badIdx = isnan(colorIdx);
-colorIdx(badIdx) = 1; % lowest value in colormap - but also change alpha to 0
-opacity = alpha_values;
-opacity(badIdx) = 0;
+% this line converts from value to index in the color map!
+% if the last input arg is dropped, alpha is assumed to be 1 for each
+% point!
+[colorVals, opacityVals] = mapValuesToColormap(overlay_values, cmap, cmapRange, alpha_values);
 
-
-[ scatterPoints ] = transparentScatter( fsData.patch.W(:,1), fsData.patch.W(:,2), sizeOfCircle, cmap(colorIdx,:), opacity )
-% s = scatter(fsData.patch.W(:,1), fsData.patch.W(:,2), 100, overlay_values, 'filled') ;
-
-% make sure we can go from 3D coords back to vertices in the Freesurfer
-% world!
-
-if(0)
+[ scatterPoints ] = transparentScatter( fsData.patch.W(:,1), fsData.patch.W(:,2), sizeOfCircle, colorVals, opacityVals )
 
 % plotBensonModel
 bensonECC = @(q, xCoord) 90.*exp(q .* (xCoord-1));
-bensonPA = @(q, yCoord) 90 + 90 .*sign(yCoord) .* (abs(yCoord)).^q;
+bensonPA = @(q, yCoord) d2r(90 + 90 .*sign(yCoord) .* (abs(yCoord)).^q);
 
-figure
+% only try to fit points for which there are data (therefore the
+% restriction to inbounds)
+someQ = 2.5;
+mfit.eccModel = bensonECC(someQ, fsData.patch.elCoords(inbounds,1))
+mfit.paModel = bensonPA(someQ, fsData.patch.elCoords(inbounds,2));
+mfit.cmap = cmap; % (use the color map that's going)
 
-% plot some numbers to see...
-[cxX, cxY] = meshgrid(0:0.1:1, -1:0.1:+1);
-
-% 
-q_ecc = 1.2;
-q_pa = 1.1;
-
-
-ECC = bensonECC(q_ecc, cxX );
-PA = bensonPA(q_pa, cxY);
-
-subplot(2,1,1)
-scatter(bPrime, xIntercept, [], xIntercept ,'filled')
-colormap(rainbow_colors)
+[mfit.colorVals, mfit.opacityVals] = mapValuesToColormap(mfit.paModel, cmap, cmapRange);
 hold on
-contour(cxX, cxY, ECC);
-caxis([0 0.25])
-
-subplot(2,1,2)
-contour(cxX, cxY, PA);
-colormap(rainbow_colors)
-
-end
-
+scatter(fsData.patch.W(:,1), fsData.patch.W(:,2), 10, mfit.colorVals, '+')
 
 keyboard
 
 
+keyboard
+
+% % plot some numbers to see...
+% [cxX, cxY] = meshgrid(0:0.1:1, -1:0.1:+1);
+% 
+% q_ecc = 1.2;
+% q_pa = 1.1;
+% 
+% 
+% ECC = bensonECC(q_ecc, cxX );
+% PA = bensonPA(q_pa, cxY);
+% 
+% subplot(2,1,1)
+% contour(cxX, cxY, ECC);
+% caxis([0 0.25])
+% 
+% subplot(2,1,2)
+% contour(cxX, cxY, PA);
+% colormap(rainbow_colors)
+    
+
+
+
+
 end
 
+
+function [colorVals, opacityVals] = mapValuesToColormap(overlay_values, cmap, cmapRange, alpha_values)
+% mapValuesToColormap - map overlay_values into a triplet from a given colormap 
+%
+%    helper function for making color mainpulations a bit easier 
+%
+%    see also: mapV1int, mapV1, showV1patch, transparentScatter
+%
+
+% need to have whole numbers to index into color map, so no other method
+% appropriate!
+interpMethod = 'nearest'; 
+
+% if no alpha_values are passed in, assume we want to show all!
+if ieNotDefined('alpha_values'), alpha_values = ones(size(overlay_values)); end
+
+nColors = size(cmap,1); % # of rows in cmap
+
+colorIdx = interp1(linspace(cmapRange(1), cmapRange(2), nColors), 1:nColors, overlay_values, interpMethod);
+
+badIdx = isnan(colorIdx);
+colorIdx(badIdx) = 1; % lowest value in colormap - but also change alpha to 0
+
+% package for return
+opacityVals = alpha_values;
+opacityVals(badIdx) = 0;
+
+% and color vals are indexed into the map
+colorVals = cmap(colorIdx,:);
+
+end
 

@@ -26,21 +26,20 @@ if ieNotDefined('subjectRoot'), subjectRoot = '/data/anatomy/freesurfer/subjects
 if ieNotDefined('subject'), subject = 'ab'; end
 if ieNotDefined('hemi'), hemi = 'lh'; end
 if ieNotDefined('showSphere'), showSphere = true(); end
-if ieNotDefined('showPatchForDebug'), showPatchForDebug = true; end
+if ieNotDefined('showPatchForDebug'), showPatchForDebug = false; end
 
 if ieNotDefined('data'), data = []; end
 % actually try to fit the model described in benson et al to the data
 if ieNotDefined('fitModel') && ~isempty(data)
-    fitModel = true; 
+    fitModel = false; 
 elseif ieNotDefined('fitModel') && isempty(data)
     disp('(!) cannot fit model, not data present')
     fitModel = false;
-    keyboard
 end
 
 
 % probability threshold for deciding what is INSIDE V1
-if ieNotDefined('thr'), thr = 0.2; end % 0.8
+if ieNotDefined('thr'), thr = 0.8; end % 0.8
 
 % should be undo the residual rotation in the V1 ellipse?
 % if set to TRUE then an affine transform is applied to center the ellipse
@@ -145,6 +144,7 @@ Sraw = zeros(size(v1label,1), 3);
 [Sraw(:,1), Sraw(:,2), Sraw(:,3) ] = mycart2sph(v1label(:,1), sSphere);
 Wraw = transpose(myshear(Sraw(:,[1 2]))); % long rows, so need to transpose
 
+figHandle = gcf;
 
 if showSphere
     % plot into a subplot
@@ -183,13 +183,9 @@ end
 
 % show curvature pattern in 2d scatter plot or another funky version, which
 % is implemented in showV1Patch
-% showV1Patch(W, c, v1labelRaw, thr, binarized);
-showV1Patch(Wraw, c, v1labelRaw, thr, binarized); % show patch thresholded at different level (less conservative)
-% showV1Patch(W, c, v1labelRaw, thr, binarized); % show patch thresholded at different level (less conservative)
+showV1Patch(W, c, v1labelRaw, thr, binarized);
 
 hold on
-% superimpose the convex hull / fit ellipse
-[xform_after, h,p] = fitV1ellipse(W, true);
 
 % fit and show ellipse to "de/un-rotated points". Also get the parameters
 % again. The center should be 0,0, the radii the same as before and the
@@ -213,7 +209,7 @@ returnData.patch.v1label = v1label;
 returnData.patch.v1LabelRaw = v1labelRaw;
 
 if showPatchForDebug
-    fd_ = figure;
+    fd_ = figure; % debug figure, remember to switch back to main figure later
     subplot(2,1,1)
     scatter(W(:,1), W(:,2), 'ro')
     axis equal
@@ -228,13 +224,12 @@ if showPatchForDebug
     end
 end
 
+figure(figHandle); % switch back to main figure
+
 % spherical coords are stored in W for this patch... ellipse params in pA
 % (after un-rotation step)
 returnData.patch.elCoords  = fitBensonCoords( W, pA, hemi);
 
-if fitModel
-    
-end
 
 
 % and reset UNIX environment variable to what we found...
