@@ -16,14 +16,17 @@ showSphere = false;
 
 % viewGet information about the current session.
 subject = lower(viewGet(v, 'subject'));
+subject = subject(1:2);
 base = viewGet(v ,'base');
 
-% strip away the "surfRelax" and "subect part, so we end up in
-subjectRoot = strrep(base.coordMap.path, sprintf('%s/surfRelax',subject), '');
 
-if ~(exist('subjectRoot','dir') == 7)
+subjectRoot = getenv('SUBJECTS_DIR')
+
+if ~(exist(subjectRoot,'dir') == 7)
     % try local
-    subjectRoot = getenv('SUBJECTS_DIR');
+    % strip away the "surfRelax" and "subect part, so we end up in
+    subjectRoot = strrep(base.coordMap.path, sprintf('%s/surfRelax',subject), '');
+        keyboard
     if ~exist('subjectRoot','dir') == 7
         error(sprintf('(uhoh) really cannot find %s\n ', subjectRoot))
     end
@@ -61,6 +64,8 @@ caxis([-2 4])
 
 % then add (as a scatter plot for now) data from overlay!
 overlays = viewGet(v, 'overlays');
+oNames = viewGet(v,'overlayNames');
+oNums = viewGet(v,'overlayNum',oNames);
 curOverlay = overlays(overlayNum);
 alphaOverlay = overlays(1); % that's how things are organized: r2, polaAngle, eccentricity, ... 
 paOverlay = overlays(2);
@@ -133,6 +138,10 @@ overlay_values = overlayData(sub2ind(size(overlayData),vtcs(:,1), vtcs(:,2), vtc
 alpha_values = alphaData(sub2ind(size(overlayData),vtcs(:,1), vtcs(:,2), vtcs(:,3)));
 pa_overlay_values = paData(sub2ind(size(overlayData),vtcs(:,1), vtcs(:,2), vtcs(:,3)));
 ecc_overlay_values = eccData(sub2ind(size(overlayData),vtcs(:,1), vtcs(:,2), vtcs(:,3)));
+
+allEcc_overlay_values = ecc_overlay_values;
+% sanitize ecc values:
+ecc_overlay_values(ecc_overlay_values < 1.5 | ecc_overlay_values > 7) = nan;
 
 % transparentScatter needs a circle size
 sizeOfCircle = 0.01;
@@ -239,6 +248,40 @@ axis([0 inf 0 inf])
 axes('position', [0.75 0.1 0.1 0.1])
 hist(eccfit.model,nBins), xlabel('fit')
 axis([0 inf 0 inf])
+
+% new figure window for residuals 
+
+rf_ = figure;
+% make a map of differences between data and model fit
+
+residualsColormap = twoCondCmap(256);
+residualsColormapRange = [-2 2];
+eccResidualsColormapRange = [0 8];
+eccResidualsColormap = twoCondCmap(256);
+eccResidualsColormap = eccResidualsColormap(128:end,:);
+
+% reset the alpha values for the whole display
+fit_alpha_values = ones(size(pafit.model));
+
+pafit.residuals = pafit.model - pa_overlay_values;
+eccfit.residuals = abs(eccfit.model - allEcc_overlay_values);
+
+subplot(2,1,1)
+mapV1(subject, hemi, subjectRoot, showSphere );
+colormap(gray)
+caxis([-2 4])
+hold on
+getColorsAndDisplay(fsData, pafit.residuals, residualsColormap, residualsColormapRange, fit_alpha_values);
+title('polar angle residuals')
+
+subplot(2,1,2)
+mapV1(subject, hemi, subjectRoot, showSphere );
+colormap(gray)
+caxis([-2 4])
+hold on
+getColorsAndDisplay(fsData, eccfit.residuals, eccResidualsColormap, eccResidualsColormapRange, fit_alpha_values);
+title('Ecc residuals')
+
 
 
 end
