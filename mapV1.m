@@ -22,7 +22,7 @@ function [ returnData ] = mapV1(subject, hemi, subjectRoot, showSphere, data)
 %             figure, mapV1(subject,hemi,subjectRoot)
 
 
-if ieNotDefined('subjectRoot'), subjectRoot = '/data/anatomy/freesurfer/subjects'; end
+if ieNotDefined('subjectRoot'), subjectRoot = '/data/anatomy/freesurfer/subjects-7T/'; end
 if ieNotDefined('subject'), subject = 'ab'; end
 if ieNotDefined('hemi'), hemi = 'lh'; end
 if ieNotDefined('showSphere'), showSphere = true(); end
