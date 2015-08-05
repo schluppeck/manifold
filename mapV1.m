@@ -1,4 +1,4 @@
-function [ returnData ] = mapV1(subject, hemi, subjectRoot, showSphere, data)
+function [ returnData ] = mapV1(subject, hemi, subjectRoot, showSphere, showPlot)
 %mapV1 - get V1 definition automatically in a subject
 %
 %      usage: [  ] = mapV1(subject, hemi, subjectRoot, showSphere )
@@ -23,19 +23,12 @@ function [ returnData ] = mapV1(subject, hemi, subjectRoot, showSphere, data)
 
 
 if ieNotDefined('subjectRoot'), subjectRoot = '/data/anatomy/freesurfer/subjects-7T/'; end
-if ieNotDefined('subject'), subject = 'ab'; end
-if ieNotDefined('hemi'), hemi = 'lh'; end
-if ieNotDefined('showSphere'), showSphere = true(); end
-if ieNotDefined('showPatchForDebug'), showPatchForDebug = false; end
+if ieNotDefined('subject'), subject = 'fsaverage'; end
+if ieNotDefined('hemi'), hemi = 'rh'; end
+if ieNotDefined('showSphere'), showSphere = true; end
+if ieNotDefined('showPatchForDebug'), showPatchForDebug = true; end
 
-if ieNotDefined('data'), data = []; end
-% actually try to fit the model described in benson et al to the data
-if ieNotDefined('fitModel') && ~isempty(data)
-    fitModel = false; 
-elseif ieNotDefined('fitModel') && isempty(data)
-    disp('(!) cannot fit model, not data present')
-    fitModel = false;
-end
+if ieNotDefined('showPlot'), showPlot = true; end
 
 
 % probability threshold for deciding what is INSIDE V1
@@ -83,6 +76,15 @@ pname = fullfile(subjectRoot, subject);
 
 % set some relative locations
 surffolder = 'surf';
+% special case: if RH and fsaverage_sym:
+if strcmp(hemi,'rhx')
+    surffolder = 'xhemi/surf';
+    hemi = 'lh'; % and reset
+elseif strcmp(hemi,'lhx')
+    surffolder = 'surf';
+    hemi = 'lh'; % and reset
+end
+
 labelfolder = 'label';
 
 % ... and naming conventions
@@ -99,8 +101,16 @@ full_curvname = fullfile(pname,surffolder,curvname);
 
 % define some helper functions view this in spherical coords?
 mycart2sph = @(X, ts) cart2sph(ts.vtcs(X(:,1),1), ts.vtcs(X(:,1),2),ts.vtcs(X(:,1),3));
-% myshear = @(X) [1 0.65 0; 0 1 0; 0 0 1] * toHomogeneous([X(:,1), X(:,2)]); only for FSAVERAGE sphere?
-myshear = @(X) [1 0 0; 0 1 0; 0 0 1] * toHomogeneous([X(:,1), X(:,2)]);
+if any(strcmp(subject,{'fsaverage','fsaverage_sym'}))
+    if strcmp(hemi, 'lh')  % 0.65 and -0.65
+       myshear = @(X) [1 0.65 0; 0 1 0; 0 0 1] * toHomogeneous([X(:,1), X(:,2)]); % only for FSAVERAGE sphere?
+    elseif strcmp(hemi, 'rh')
+       myshear = @(X) [1 -0.65 0; 0 1 0; 0 0 1] * toHomogeneous([X(:,1), X(:,2)]); % only for FSAVERAGE sphere?
+    end
+       disp('using special SHEAR matrix!!')
+else
+    myshear = @(X) [1 0 0; 0 1 0; 0 0 1] * toHomogeneous([X(:,1), X(:,2)]);
+end
 fromHomogeneous = @(X) transpose(X([1 2],:));
 myUnrotate = @(X, xform) fromHomogeneous(xform * toHomogeneous([X(:,1), X(:,2)]));
 myScatter = @(X,ts) scatter(  ts.vtcs(X(:,1),1), ts.vtcs(X(:,1),2), 5, 'r.'  );
@@ -140,13 +150,15 @@ S = zeros(size(v1label,1), 3);
 [S(:,1), S(:,2), S(:,3) ] = mycart2sph(v1label(:,1), sSphere);
 W = transpose(myshear(S(:,[1 2]))); % long rows, so need to transpose
 
-Sraw = zeros(size(v1label,1), 3);
-[Sraw(:,1), Sraw(:,2), Sraw(:,3) ] = mycart2sph(v1label(:,1), sSphere);
+Sraw = zeros(size(v1labelRaw,1), 3);
+[Sraw(:,1), Sraw(:,2), Sraw(:,3) ] = mycart2sph(v1labelRaw(:,1), sSphere);
 Wraw = transpose(myshear(Sraw(:,[1 2]))); % long rows, so need to transpose
 
-figHandle = gcf;
+if showPlot
+    figHandle = gcf;
+end
 
-if showSphere
+if showSphere && showPlot
     % plot into a subplot
     subplot(1,3,1)
     renderSurf(sSphere,sign(c))
@@ -162,44 +174,57 @@ if showSphere
     camlight('left')
 end
 
-if showSphere
-    % and make the 2nd patch a subplot figure, too
-    subplot(1,3,[2 3])
-end
-
 
 if unrotate
     % fit an ellipse around the points and don't show it
-    [xform, h,p] = fitV1ellipse(W, false);
+    % - now uses the expanded V1 stored in Wraw as well...
+    
+    [xform, h,p] = fitV1ellipse(W, false,[],[], Wraw);
+    
     % this overwrites the points stored in W, which are then used further
     % along
     
-    % keep a copy of rotated W (for debug plot)
+    % keep a copy of rotated W / raw (for debug plot)
     Wrotated = W;
+    WrawRotated = Wraw;
     W = myUnrotate(W, inv(xform));
+    Wraw = myUnrotate(Wraw, inv(xform));
+    
 else
     Wrotated = []; % no need to keep an extra copy. W is still rotated
 end
 
-% show curvature pattern in 2d scatter plot or another funky version, which
-% is implemented in showV1Patch
-showV1Patch(W, c, v1labelRaw, thr, binarized);
-
-hold on
+if showPlot
+    if showSphere
+        % and make the 2nd patch a subplot figure, too
+        subplot(1,3,[2 3])
+    end
+    
+    % show curvature pattern in 2d scatter plot or another funky version, which
+    % is implemented in showV1Patch
+    showV1Patch(Wraw, c, v1labelRaw, thr, binarized);
+    alpha(0.5)
+    showV1Patch(W, c, v1label, thr, binarized);
+    
+    hold on
+end
 
 % fit and show ellipse to "de/un-rotated points". Also get the parameters
 % again. The center should be 0,0, the radii the same as before and the
 % rotation 0 rad!
-[xform_after, hA,pA] = fitV1ellipse(W, true);
+[xform_after, hA,pA] = fitV1ellipse(W, showPlot,[],[],Wraw); % either show or don't
 
-colormap(gray)
-caxis([-5 5])
-axis equal
-axis off
-
+if showPlot
+    colormap(gray)
+    caxis([-5 5])
+    axis equal
+    axis off
+end
 % package up some data to return
 returnData.ellipse.xform = xform;
 returnData.ellipse.p = p;
+returnData.ellipse.pA = pA;
+
 returnData.ellipse.h = h;
 
 returnData.patch.W = W;
@@ -216,6 +241,8 @@ if showPatchForDebug
     title(sprintf('ellipse; sub: %s, hemi: %s', subject, hemi))
     if ~isempty(Wrotated)
         subplot(2,1,2)
+        scatter(WrawRotated(:,1), WrawRotated(:,2), 'ro')
+        hold on
         scatter(Wrotated(:,1), Wrotated(:,2), 'b+')
         axis equal
         xNeg = sum(Wrotated(:,1) <= -pi/2);
@@ -224,7 +251,9 @@ if showPatchForDebug
     end
 end
 
-figure(figHandle); % switch back to main figure
+if showPlot
+    figure(figHandle); % switch back to main figure
+end
 
 % spherical coords are stored in W for this patch... ellipse params in pA
 % (after un-rotation step)

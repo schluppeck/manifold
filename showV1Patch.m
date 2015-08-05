@@ -20,7 +20,11 @@ if ieNotDefined('binarized'), binarized = false; end
 % threshold the V1 label probabilites according to a value
 % return all columns ID, sphericalCoords [1 2 3], label prob
 % thresholdedV1label = v1label(v1label(:,5)>thr , :);
-thresholdedV1label = threshold_label(v1label, thr);
+% thresholdedV1label = threshold_label(v1label, thr);
+% but this has now been moved to outside the function! so just use all --
+% this facilitates drawing the expanded V1
+%
+thresholdedV1label = v1label;
 
 % and pick the corresponding curvature values
 fvertexcdata = curv(thresholdedV1label(:,1));
