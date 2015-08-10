@@ -217,7 +217,7 @@ end
 if showPlot
     colormap(gray)
     caxis([-5 5])
-    axis equal
+    daspect([2 1 1]) % axis equal
     axis off
 end
 % package up some data to return
@@ -237,14 +237,14 @@ if showPatchForDebug
     fd_ = figure; % debug figure, remember to switch back to main figure later
     subplot(2,1,1)
     scatter(W(:,1), W(:,2), 'ro')
-    axis equal
+    daspect([2 1 1]) % axis equal
     title(sprintf('ellipse; sub: %s, hemi: %s', subject, hemi))
     if ~isempty(Wrotated)
         subplot(2,1,2)
         scatter(WrawRotated(:,1), WrawRotated(:,2), 'ro')
         hold on
         scatter(Wrotated(:,1), Wrotated(:,2), 'b+')
-        axis equal
+        daspect([2 1 1]) % axis equal
         xNeg = sum(Wrotated(:,1) <= -pi/2);
         xPos = sum(Wrotated(:,1) > -pi/2);
         title(sprintf('orig ellipse; sub: %s, hemi: %s [< / > -pi/2] %i/%i', subject, hemi, xNeg, xPos))
