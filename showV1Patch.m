@@ -42,7 +42,7 @@ else
     set(p_,'markeredgecolor', 'none');
     % shading flat
     shading interp
-    axis equal
+    daspect([2 1 1]) % one unit along x is only 0.5 of y (0->1 versus -1 -> 1)
 end
 
 end
