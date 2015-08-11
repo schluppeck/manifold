@@ -177,7 +177,7 @@ else % don't use convex hull for fitting.
     xEinside = xE(insidePlateau);
     yEinside = yE(insidePlateau);
     
-    kInside = convhull(xEinside, yEinside)
+    kInside = convhull(xEinside, yEinside);
     
     p = fitellipse(xEinside(kInside), yEinside(kInside));
 
